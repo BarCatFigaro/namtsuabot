@@ -10,12 +10,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"cloud.google.com/go/translate"
+	language "cloud.google.com/go/language/apiv1"
+	languagepb "google.golang.org/genproto/googleapis/cloud/language/v1"
+
 	"google.golang.org/api/googleapi/transport"
 
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/oauth2"
-	"golang.org/x/text/language"
+	// "golang.org/x/text/language"
 )
 
 // Configuration for APIs
@@ -24,7 +26,9 @@ type Configuration struct {
 	DiscordToken string
 }
 
-var configuration Configuration
+var configMap = make(map[string]Configuration)
+
+const key = "API"
 
 func main() {
 
@@ -33,14 +37,15 @@ func main() {
 		log.Fatalf("Add config.json to this directory; %v\n", err)
 	}
 	decoder := json.NewDecoder(file)
-	configuration = Configuration{}
+	configuration := Configuration{}
 	err = decoder.Decode(&configuration)
 	if err != nil {
 		fmt.Println("error: ", err)
 	}
+	configMap["API"] = configuration
 
 	// Create a new Discord session using the provided bot token.
-	dg, err := discordgo.New("Bot " + configuration.DiscordToken)
+	dg, err := discordgo.New("Bot " + configMap[key].DiscordToken)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 		return
@@ -88,14 +93,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	msg, _ := s.ChannelMessage(m.ChannelID, m.Message.ID)
+
+	/* // for translator
 	for _, translation := range translator(msg.Content) {
 		s.ChannelMessageSend("334562076972548103", translation.Text)
 	}
+	*/
+
+	s.ChannelMessageSend("334562076972548103", sentimenter(msg.Content))
 }
 
+/*
 func translator(text string) []translate.Translation {
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
-		Transport: &transport.APIKey{Key: configuration.GoogleKey},
+		Transport: &transport.APIKey{Key: configMap[key].GoogleKey},
 	})
 	// create client
 	client, err := translate.NewClient(ctx)
@@ -115,11 +126,11 @@ func translator(text string) []translate.Translation {
 
 	return translations
 }
+*/
 
-/*
 func sentimenter(text string) string {
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
-		Transport: &transport.APIKey{Key: configuration.GoogleKey},
+		Transport: &transport.APIKey{Key: configMap[key].GoogleKey},
 	})
 
 	// Creates a client.
@@ -148,4 +159,3 @@ func sentimenter(text string) string {
 	return fmt.Sprintf("Text: %v\n", text) + "\nSentiment: negative"
 
 }
-*/
