@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -56,48 +57,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	out := ""
+	out := "func call: messageCreate"
 
-	if m.Content == "!chess" {
-		out = chessCommand()
+	if strings.HasPrefix(m.Content, "!chess") {
+		out = chessCommand(m.Author.Username, strings.TrimPrefix(m.Content, "!chess "))
 	}
 
 	s.ChannelMessageSend(m.ChannelID, out)
-}
-
-func chessCommand() string {
-	/*
-			board := `
-						8 ║♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜
-						7 ║♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟
-						6 ║
-						5 ║
-						4 ║
-						3 ║
-						2 ║♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙
-						1 ║♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖
-		                 —╚═══════════════
-						—— a  b c  d e  f g  h`
-	*/
-	return buildBoard()
-}
-
-func buildBoard() string {
-	board := "Chess board" + `    
-
-		♜ ♞ ♝ ♛ ♚ ♝ ♜ ♞
-		♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟
-		
-		
-		
-		
-		♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙
-		♖ ♘ ♗ ♕ ♔ ♖ ♘ ♗`
-
-	return board
-}
-
-// TODO
-func santizeBoard(board string) string {
-	return ""
 }
