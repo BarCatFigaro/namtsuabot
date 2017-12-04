@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/barcatfigaro/namtsuabot/command"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -57,11 +58,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	out := "func call: messageCreate"
+	if len(m.Message.Content) > 0 && command.Is(m.Message.Content) {
+		msg := strings.Split(m.Message.Content, " ")
+		typ := command.Find(msg[0][1:])
+		cmd, err := command.New(typ, msg)
 
-	if strings.HasPrefix(m.Content, "!chess") {
-		out = chessCommand(m.Author.Username, strings.TrimPrefix(m.Content, "!chess "))
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, err.Error())
+		}
+
+		cmd.Execute(s, m)
 	}
-
-	s.ChannelMessageSend(m.ChannelID, out)
 }
