@@ -5,35 +5,54 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
+	"regexp"
 	"syscall"
 
-	"github.com/barcatfigaro/namtsuabot/command"
 	"github.com/bwmarrin/discordgo"
 )
 
-// Bot represents a Namtsuabot instance
-type Bot struct {
-	// Session is a discordgo session
-	Session *discordgo.Session
+var nb *NamtsuaBot
+var channelRegex = regexp.MustCompile("<#[0-9]+>")
+var roleRegex = regexp.MustCompile("<@&[0-9]+>")
+var userRegex = regexp.MustCompile("<@!?[0-9]+>")
+var mentionRegex = regexp.MustCompile("<@(!|&)?[0-9]+>")
+
+// NamtsuaBot represents a Namtsuabot instance
+type NamtsuaBot struct {
+	Session     *discordgo.Session
+	MainGuildID string
+	SelfID      uint64
+	Info        *GuildInfo
 }
 
 // New creates a new bot instance
-func New(token string) *Bot {
-	nb, err := discordgo.New("Bot " + token)
+func New(token, guildID string) *NamtsuaBot {
+	s, err := discordgo.New("Bot " + token)
 	if err != nil {
 		log.Fatalf("problem creating namtsuabot; %v\n", err)
 	}
 
-	b := &Bot{
-		Session: nb,
+	temp, _ := s.Guild(guildID)
+	g := &GuildInfo{
+		ID:       guildID,
+		Name:     temp.Name,
+		OwnerID:  sanitizeUser(temp.OwnerID),
+		commands: make(map[string]Command),
 	}
+
+	b := &NamtsuaBot{
+		Session:     s,
+		MainGuildID: guildID,
+		Info:        g,
+	}
+	g.Bot = b
+
 	return b
 }
 
 // Connect opens a websocket connection
 // func will return after disconnecting
-func (b *Bot) Connect(cli bool) {
+func (b *NamtsuaBot) Connect(cli bool) {
 	if err := b.Session.Open(); err != nil {
 		fmt.Printf("error opening connection: %v\n", err)
 		return
@@ -56,17 +75,5 @@ func (b *Bot) Connect(cli bool) {
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
-	}
-
-	if len(m.Message.Content) > 0 && command.Is(m.Message.Content) {
-		msg := strings.Split(m.Message.Content, " ")
-		typ := command.Find(msg[0][1:])
-		cmd, err := command.New(typ, msg)
-
-		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
-		}
-
-		cmd.Execute(s, m)
 	}
 }
